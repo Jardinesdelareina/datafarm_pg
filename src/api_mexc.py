@@ -3,8 +3,8 @@ import _thread
 import json
 import websocket
 import datetime
-from db import cursor, connection
-from symbol_list import symbol_list
+from src.db import cursor, connection
+from src.symbol_list import symbol_list
 
 deals_list = []
 
