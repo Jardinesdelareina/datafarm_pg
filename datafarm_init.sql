@@ -43,7 +43,7 @@ CREATE TABLE market.users
         email ~* '^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$'
     ) PRIMARY KEY,
     password VARCHAR(100) NOT NULL
-)
+);
 
 
 -- Портфели пользователей
@@ -89,7 +89,7 @@ CREATE OR REPLACE PROCEDURE market.create_portfolio(
     input_is_published BOOLEAN,
     input_user_email market.valid_email
     ) AS $$
-    INSERT INTO ms.portfolios(title, is_published, fk_user_email)
+    INSERT INTO market.portfolios(title, is_published, fk_user_email)
     VALUES(input_title, input_is_published, input_user_email);
 $$ LANGUAGE sql;
 
@@ -249,5 +249,5 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER alert_new_transaction_trigger
-AFTER INSERT ON ms.transactions
+AFTER INSERT ON market.transactions
 FOR EACH ROW EXECUTE FUNCTION market.alert_new_transaction();
