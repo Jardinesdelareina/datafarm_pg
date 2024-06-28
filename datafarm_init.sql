@@ -146,7 +146,7 @@ CREATE OR REPLACE FUNCTION market.get_price_with_time(
     WHERE fk_symbol = input_symbol
     ORDER BY ABS(EXTRACT(EPOCH FROM (t_time - input_time)))
     LIMIT 1
-$$ LANGUAGE sql IMMUTABLE;
+$$ LANGUAGE sql STABLE;
 
 
 -- Вывод списка портфелей определенного пользователя
@@ -175,7 +175,7 @@ BEGIN
     FROM qty_currency;
     RETURN qty_transaction;
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql STABLE;
 
 
 -- Вывод баланса портфеля в usdt
