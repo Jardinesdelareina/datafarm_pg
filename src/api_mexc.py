@@ -3,10 +3,9 @@ import _thread
 import json
 import websocket
 import datetime
-from src.db import cursor, connection
-from src.symbol_list import symbol_list
+from db import cursor, connection
 
-deals_list = []
+symbol_list = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT']
 
 
 class SocketConnection(websocket.WebSocketApp):

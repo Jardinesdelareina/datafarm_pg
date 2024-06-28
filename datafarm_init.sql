@@ -32,7 +32,7 @@ CREATE TABLE market.tickers
 (
     fk_symbol VARCHAR(20) REFERENCES market.currencies(symbol),
     t_time TIMESTAMPTZ NOT NULL,
-    t_price FLOAT8 NOT NULL
+    t_price NUMERIC NOT NULL
 );
 
 
@@ -61,7 +61,7 @@ CREATE TABLE market.transactions
 (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     action_type VARCHAR(4) CHECK (action_type IN ('BUY', 'SELL')) DEFAULT 'BUY',
-    quantity REAL NOT NULL,
+    quantity NUMERIC NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     fk_portfolio_id INT REFERENCES market.portfolios(id),
     fk_currency_symbol VARCHAR(20) REFERENCES market.currencies(symbol)
@@ -110,7 +110,7 @@ $$ LANGUAGE sql;
 -- Создание транзакции
 CREATE OR REPLACE PROCEDURE market.create_transaction(
     input_action_type VARCHAR(4),
-    input_quantity REAL,
+    input_quantity NUMERIC,
     input_portfolio_id INT,
     input_currency_symbol VARCHAR(20)
     ) AS $$
@@ -127,7 +127,7 @@ $$ LANGUAGE sql;
 -- Получение последней котировки определенного тикера
 --
 CREATE OR REPLACE FUNCTION market.get_price(input_symbol VARCHAR(20)) 
-RETURNS REAL AS $$
+RETURNS NUMERIC AS $$
     SELECT t_price AS last_price 
     FROM market.tickers
     WHERE fk_symbol = input_symbol
@@ -140,10 +140,12 @@ $$ LANGUAGE sql VOLATILE;
 CREATE OR REPLACE FUNCTION market.get_price_with_time(
     input_symbol VARCHAR(20),
     input_time TIMESTAMPTZ
-) RETURNS FLOAT8 AS $$
+) RETURNS NUMERIC AS $$
     SELECT t_price AS current_price
     FROM market.tickers
-    WHERE fk_symbol = input_symbol AND t_time = input_time
+    WHERE fk_symbol = input_symbol
+    ORDER BY ABS(EXTRACT(EPOCH FROM (t_time - input_time)))
+    LIMIT 1
 $$ LANGUAGE sql IMMUTABLE;
 
 
@@ -160,8 +162,8 @@ $$ LANGUAGE plpgsql STABLE;
 
 -- Расчет объема транзакции в usdt
 CREATE OR REPLACE FUNCTION market.get_value_transaction(input_transaction_id UUID) 
-RETURNS REAL AS $$
-DECLARE qty_transaction REAL;
+RETURNS NUMERIC AS $$
+DECLARE qty_transaction NUMERIC;
 BEGIN
     WITH qty_currency AS (
         SELECT t.created_at, t.quantity, t.fk_currency_symbol AS curr
@@ -178,8 +180,8 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 
 -- Вывод баланса портфеля в usdt
 CREATE OR REPLACE FUNCTION market.get_balance_portfolio(input_portfolio_id INT)
-RETURNS REAL AS $$
-DECLARE total_quantity REAL := 0;
+RETURNS NUMERIC AS $$
+DECLARE total_quantity NUMERIC := 0;
 BEGIN
     SELECT SUM(
         CASE WHEN t.action_type = 'BUY' THEN t.quantity ELSE -t.quantity END
@@ -198,7 +200,7 @@ $$ LANGUAGE plpgsql VOLATILE;
 
 -- Вывод криптовалют, их количества и балансов в портфеле
 CREATE OR REPLACE FUNCTION market.get_balance_ticker_portfolio(input_portfolio_id INT) 
-RETURNS TABLE(symbol VARCHAR(20), qty_currency REAL, usdt_qty_currency REAL) AS $$
+RETURNS TABLE(symbol VARCHAR(20), qty_currency NUMERIC, usdt_qty_currency NUMERIC) AS $$
 BEGIN
     RETURN QUERY SELECT DISTINCT 
                     fk_currency_symbol AS symbol, 
@@ -218,8 +220,8 @@ $$ LANGUAGE plpgsql VOLATILE;
 
 -- Вывод совокупного баланса пользователя
 CREATE OR REPLACE FUNCTION market.get_total_balance_user(input_user_email market.valid_email) 
-RETURNS REAL AS $$
-DECLARE total_balance REAL := 0;
+RETURNS NUMERIC AS $$
+DECLARE total_balance NUMERIC := 0;
         portfolio_id INT;
 BEGIN
     FOR portfolio_id IN (
